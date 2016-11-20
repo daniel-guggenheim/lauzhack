@@ -7,8 +7,12 @@ const app = express();
 var bodyParser = require('body-parser');
 var multer = require('multer'); // v1.0.5
 var upload = multer(); // for parsing multipart/form-data
+var FCM = require('fcm-push');
 
 const GOOGLE_TOKEN_VERIFICATION_WEBSITE = 'https://www.googleapis.com/oauth2/v3/tokeninfo?id_token='
+
+var serverKey = 'AIzaSyAu4k_r7Uti6M5cxdl4FJLREWID0sBSUUo';
+var fcm = new FCM(serverKey);
 
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
@@ -85,6 +89,7 @@ app.post('/signup', upload.array(), function (req, res) {
 
     var google_token = req.body.google_token;
     var username = req.body.username;
+    var firebase_token = req.body.firebase_token;
 
     //Test if username is available
     is_username_available(username, function (usernameAvailable) {
@@ -103,7 +108,7 @@ app.post('/signup', upload.array(), function (req, res) {
                     const myNewUser = new Users({
                         google_id: google_id,
                         username: username,
-                        firebase_token: '',
+                        firebase_token: firebase_token,
                         last_message: {
                             content: '',
                         }
@@ -141,7 +146,7 @@ app.post('/login', upload.array(), function (req, res) {
                     res.status(404).send(message + '  -  ' + google_id);
                 } else {
                     //Google id in database == person has already logged in at least once
-                    res.status(200).send({token: google_id, username: username});
+                    res.status(200).send({ token: google_id, username: username });
                 }
             });
         }
@@ -172,7 +177,7 @@ app.put('/users/:to_username/wall', upload.array(), function (req, res) {
                     }
 
                     //Update wall of to_username
-                    Users.findOne({ username: from_username }, function (err, user_to_update) {
+                    Users.findOne({ username: from_username }, 'firebase_token' , function (err, user_to_update) {
                         if (err) {
                             console.log('Error in getting user from db.')
                         }
@@ -181,6 +186,29 @@ app.put('/users/:to_username/wall', upload.array(), function (req, res) {
                             if (err) {
                                 console.log('Error in updating user from db');
                             }
+
+                            //SEND NOTIFICATION
+                            console.log('Sending notif to firebase.')
+                            var message = {
+                                to: user_to_update.firebase_token, // required fill with device token or topics
+                                collapse_key: 'AIzaSyBFW45LN9WPZjlfQBgGhXnbTtGdJogZvJA',
+                                data: {
+                                    type: 'new_message',
+                                    content: message_content
+                                }
+                            };
+
+                            fcm.send(message, function (err, response) {
+                                if (err) {
+                                    console.log("Problem in sending notification to firebase");
+                                } else {
+                                    console.log("Successfully sent notification to firebase with response: ", response);
+                                }
+                            });
+
+
+
+                            //success messages
                             var success_message = 'New message put on server - from: ' + from_username + '; to: ' + to_username +
                                 '; content: "' + message_content + '".'
                             console.log(finalUser);
