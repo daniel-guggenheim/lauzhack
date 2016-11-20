@@ -22,6 +22,7 @@ let mongoUrl = '';
 if (process.env.VCAP_SERVICES) {
     const vcapServices = JSON.parse(process.env.VCAP_SERVICES);
     mongoUrl = vcapServices.mongodb[0].credentials.uri;
+    console.log("mongo url: " + mongoUrl);
 } else {
     mongoUrl = 'mongodb://localhost/breakingwall';
 }
@@ -130,14 +131,19 @@ app.post('/login', upload.array(), function (req, res) {
     var google_token = req.body.google_token;
     launch_google_id_request(res, google_token, function (google_id) {
         if (google_id != undefined) {
-            if (true) { //google_id is not in database
-                var message = 'Token is not in database.';
-                console.log(message);
-                res.status(404).send(message + '  -  ' + google_id);
-            } else {
-                //Google id in database == person has already logged in at least once
-                res.status(200).send(google_id);
-            }
+
+            //Check if user has registered his google token by us
+            user_has_valid_token(google_id, function (user_has_valid_token, username) {
+                if (!user_has_valid_token) {
+                    //google_id is not in database
+                    var message = 'Token is not in database.';
+                    console.log(message);
+                    res.status(404).send(message + '  -  ' + google_id);
+                } else {
+                    //Google id in database == person has already logged in at least once
+                    res.status(200).send({token: google_id, username: username});
+                }
+            });
         }
     });
 });
@@ -159,14 +165,14 @@ app.put('/users/:to_username/wall', upload.array(), function (req, res) {
                 if (!to_user_is_not_defined) {
 
                     //Create updated last_message
-                    newMessage = {
+                    var newMessage = {
                         from: from_username,
                         to: to_username,
                         content: message_content
                     }
 
                     //Update wall of to_username
-                    Users.findOne({username: from_username}, function (err, user_to_update) {
+                    Users.findOne({ username: from_username }, function (err, user_to_update) {
                         if (err) {
                             console.log('Error in getting user from db.')
                         }
@@ -177,22 +183,11 @@ app.put('/users/:to_username/wall', upload.array(), function (req, res) {
                             }
                             var success_message = 'New message put on server - from: ' + from_username + '; to: ' + to_username +
                                 '; content: "' + message_content + '".'
-                            res.status(200).send(success_message);
+                            console.log(finalUser);
+                            res.status(200).send({ success: 'lol' });
                             console.log(success_message);
                         });
                     });
-
-
-
-
-                    Users.update({ username: to_username }, {
-                        last_message: {
-                            from: from_username,
-                            to: to_username,
-                            content: message_content
-                        }
-                    }, );
-
                 } else {
                     // To user does not exist.
                     res.status(400).send('To user does not exist.');
@@ -211,13 +206,14 @@ app.put('/users/:to_username/wall', upload.array(), function (req, res) {
 app.get('/users/:my_username/wall', function (req, res) {
     var name = req.params.my_username;
     console.log("Getting last message from my wall with username " + name + "....");
-    Users.findOne({ 'username': name }, 'message', function (err, user) {
+    Users.findOne({ username: name }, 'last_message', function (err, user) {
         if (err) {
             error_message = 'Username ' + name + ' seems not valid...';
             console.err(error_message);
             res.status(400).send(error_message);
         } else {
-            console.log('Message retrieved: ' + user.last_message);
+            console.log(user);
+            console.log('Message retrieved: ' + user.last_message.content);
             res.status(200).send(user.last_message);
         }
     });
