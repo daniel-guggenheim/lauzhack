@@ -4,8 +4,33 @@ const mongoose = require('mongoose');
 const request = require("request");
 const express = require('express');
 const app = express();
+var bodyParser = require('body-parser');
+var multer = require('multer'); // v1.0.5
+var upload = multer(); // for parsing multipart/form-data
 
 const GOOGLE_TOKEN_VERIFICATION_WEBSITE = 'https://www.googleapis.com/oauth2/v3/tokeninfo?id_token='
+
+
+let mongoUrl = '';
+
+// check if the app is running in the cloud and set the MongoDB settings accordingly
+if (process.env.VCAP_SERVICES) {
+  const vcapServices = JSON.parse(process.env.VCAP_SERVICES);
+  mongoUrl = vcapServices.mongodb[0].credentials.uri;
+} else {
+  mongoUrl = 'mongodb://localhost/db';
+}
+
+// connect to our MongoDB
+mongoose.connect(mongoUrl);
+
+
+
+app.use(bodyParser.json()); // for parsing application/json
+app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+
+
+
 
 
 // GET : is-username-available
@@ -19,61 +44,66 @@ app.get('/signup/:username/:google_token', function (req, res) {
     console.log("Login starting....");
     var google_response = get_id_from_google(req.params.google_token);
 
-    if ((google_response == null) || google_response.aud == "") {
-        var error_message = 'Error requesting google token. Network problems or token does not exist.';
+    if ((google_response == null) || !google_response.aud) {
+        console.log(google_response.aud);
+        var error_message = 'Error requesting google token. Network problems or token does not exist.\n';
         console.log(error_message);
-        res.send(error_message);
+        res.send(error_message + google_response);
     } else {
-        var google_id = google_response.aud
-
-        if (database.contains(google_id)) { //TODO
-            //Login case
-            //Generate our_token
-            //Add token to database
-            res.send('our_token')
-        } else {
-            res.send('no_user_in_database')
-        }
-
-
+        var google_id = google_response.aud;
+        res.send(google_response);
+        // if (database.contains(google_id)) { //TODO
+        //     //Login case
+        //     //Generate our_token
+        //     //Add token to database
+        //     res.send('our_token')
+        // } else {
+        //     res.send('no_user_in_database')
+        // }
     }
 })
 
 
 
-// GET: login
-app.get('/login/:google_token', function (req, res) {
+// POST: login
+app.post('/login', upload.array(), function (req, res) {
     console.log("Login starting....");
-    var google_response = get_id_from_google(req.params.google_token);
-
-    if ((google_response == null) || google_response.aud == "") {
+    // var google_token = req.params.google_token;
+    var google_token = req.body.google_token;
+    // console.log(req.body);
+    console.log('Request on: ' + google_token);
+    get_id_from_google(google_token,function(google_response){
+        console.log('callback: '+google_response);
+    if ((google_response == null) || !google_response.aud) {
         var error_message = 'Error requesting google token. Network problems or token does not exist.';
         console.log(error_message);
         res.send(error_message);
     } else {
         var google_id = google_response.aud
-
-        if (database.contains(google_id)) { //TODO
-            //Login case
-            //Generate our_token
-            //Add token to database
-            res.send('our_token')
-        } else {
-            res.send('no_user_in_database')
-        }
-
-
+        console.log('google_id = ' + google_id);
+        res.send(google_response);
+        // if (database.contains(google_id)) { //TODO
+        //     //Login case
+        //     //Generate our_token
+        //     //Add token to database
+        //     res.send('our_token')
+        // } else {
+        //     res.send('no_user_in_database')
+        // }
     }
+
+    });
+    
 })
 
 
 
-function is_username_available(username){
+function is_username_available(username) {
     return false;
 }
 
 
-function get_id_from_google(token) {
+function get_id_from_google(token, callback) {
     var request_address = GOOGLE_TOKEN_VERIFICATION_WEBSITE.concat(token);
     request({
         uri: request_address,
@@ -83,13 +113,13 @@ function get_id_from_google(token) {
     }, function (error, response, body) {
         if (error) {
             console.log('Error requesting google token: ', error);
-            return null;
-        } else if (response.statusCode != 400) {
+            callback(null);
+        } else if (response.statusCode != 200) {
             console.log('Error in status code when requesting google token. Status code= ', response.statusCode);
-            return null;
+            callback(body);
         } else {
-            console.log('Google request: ' +body);
-            return (body);
+            console.log('Google request success!: ' + body);
+            callback(JSON.parse(body));
         }
     });
 }
@@ -134,34 +164,32 @@ app.get('/test', function (req, res) {
 // app.use('/', routes);
 
 // catch 404 and forward to error handler
-app.use((req, res, next) => {
-  const err = new Error('Not Found');
-  err.status = 404;
-  next(err);
-});
+// app.use((req, res, next) => {
+//   const err = new Error('Not Found');
+//   err.status = 404;
+//   next(err);
+// });
 
 // error handlers
 
 // development error handler
 // will print stacktrace
-if (app.get('env') === 'development') {
-  app.use((err, req, res, next) => {
-    res.status(err.status || 500);
-    res.render('error', {
-      message: err.message,
-      error: err
-    });
-  });
-}
+// if (app.get('env') === 'development') {
+//   app.use((err, req, res, next) => {
+//     res.status(err.status || 500).send('error', {
+//       message: err.message,
+//       error: err
+//     });
+//   });
+// }
 
 // production error handler
 // no stacktraces leaked to user
-app.use((err, req, res, next) => {
-  res.status(err.status || 500);
-  res.render('error', {
-    message: err.message,
-    error: {}
-  });
-});
+// app.use((err, req, res, next) => {
+//   res.status(err.status || 500).send('error', {
+//     message: err.message,
+//     error: {}
+//   });
+// });
 
 module.exports = app;
