@@ -1,0 +1,13 @@
+---
+applications:
+- name: breakingwall-app
+  memory: 128MB
+  instances: 1
+
+  host: breakingwall
+
+  services:
+  - my-mongodb
+
+  env:
+    NODE_ENV: development
