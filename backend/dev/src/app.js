@@ -177,7 +177,7 @@ app.put('/users/:to_username/wall', upload.array(), function (req, res) {
                     }
 
                     //Update wall of to_username
-                    Users.findOne({ username: from_username }, 'firebase_token' , function (err, user_to_update) {
+                    Users.findOne({ username: to_username }, 'firebase_token' , function (err, user_to_update) {
                         if (err) {
                             console.log('Error in getting user from db.')
                         }
