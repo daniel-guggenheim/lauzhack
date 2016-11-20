@@ -1,0 +1,1 @@
+Frontend service with Java app

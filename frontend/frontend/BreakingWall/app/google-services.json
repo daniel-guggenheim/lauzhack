@@ -1,0 +1,59 @@
+{
+  "project_info": {
+    "project_number": "402729333725",
+    "firebase_url": "https://breakingwall-65e8f.firebaseio.com",
+    "project_id": "breakingwall-65e8f",
+    "storage_bucket": "breakingwall-65e8f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:402729333725:android:b410729bdd86e49b",
+        "android_client_info": {
+          "package_name": "ch.google.thomas.breakingwall"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "402729333725-jkn081agc2addmf4qu3bll78680rj3do.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ch.google.thomas.breakingwall",
+            "certificate_hash": "7202AC2E741B7B7D7E10ED1A57DCD5FFEFA4B3D6"
+          }
+        },
+        {
+          "client_id": "402729333725-83554lnpnp18tna6v0hrifkgi21tkn3b.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "402729333725-qkqrigm94l0h27dqvb7ujens75ber1lj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUqXAOFPNAyMtx5BTcq4g7QSisnkvpM3s"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "402729333725-83554lnpnp18tna6v0hrifkgi21tkn3b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
