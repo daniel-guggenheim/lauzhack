@@ -254,7 +254,9 @@ app.get('/users/:my_username/wall', function (req, res) {
 
 function user_has_valid_token(token, callback) {
     Users.findOne({ 'google_id': token }, 'username', function (err, user) {
-        if (err) return handleError(err);
+        if (err){
+            console.log('error in finding token');
+        } 
         const user_has_valid_token = (user != undefined);
         console.log('User' + user.username + 'has valid token.');
         callback(user_has_valid_token, user.username);
@@ -279,7 +281,7 @@ function launch_google_id_request(res, google_token, finish_login_signup) {
             finish_login_signup(undefined);
         } else {
             //No problem in getting code
-            var google_id = google_response.aud;
+            var google_id = google_response.sub; //getting unique id
             if (!google_id) {
                 var error_message = 'Token is not valid.';
                 console.log(error_message);
