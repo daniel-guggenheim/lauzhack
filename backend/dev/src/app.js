@@ -70,10 +70,11 @@ app.get('/test', function (req, res) {
 
 
 // IS USERNAME AVAILABLE (get)
+//MARCHE PAS
 app.get('/is-username-available/:username/', function (req, res) {
     var test_username = req.params.username;
     res.send('username requested: ' + test_username + ', availability: ' + is_username_available(test_username));
-})
+});
 
 
 
@@ -139,16 +140,104 @@ app.post('/login', upload.array(), function (req, res) {
             }
         }
     });
-})
+});
+
+
+// PUT MESSAGE ON WALL (post)
+app.put('/users/:to_username/wall', upload.array(), function (req, res) {
+    console.log("Sending message and changing wall....");
+    var token = req.body.token;
+    var message_content = req.body.message_content;
+    var to_username = req.params.to_username;
+
+    //Check if sender is correct
+    user_has_valid_token(token, function (user_has_valid_token, from_username) {
+        if (user_has_valid_token) {
+
+            //Check if receiver username is correct
+            is_username_available(to_username, function (to_user_is_not_defined) {
+                if (!to_user_is_not_defined) {
+
+                    //Create updated last_message
+                    newMessage = {
+                        from: from_username,
+                        to: to_username,
+                        content: message_content
+                    }
+
+                    //Update wall of to_username
+                    Users.findOne({username: from_username}, function (err, user_to_update) {
+                        if (err) {
+                            console.log('Error in getting user from db.')
+                        }
+                        user_to_update.last_message = newMessage;
+                        user_to_update.save(function (err, finalUser) {
+                            if (err) {
+                                console.log('Error in updating user from db');
+                            }
+                            var success_message = 'New message put on server - from: ' + from_username + '; to: ' + to_username +
+                                '; content: "' + message_content + '".'
+                            res.status(200).send(success_message);
+                            console.log(success_message);
+                        });
+                    });
 
 
 
-// Send
+
+                    Users.update({ username: to_username }, {
+                        last_message: {
+                            from: from_username,
+                            to: to_username,
+                            content: message_content
+                        }
+                    }, );
+
+                } else {
+                    // To user does not exist.
+                    res.status(400).send('To user does not exist.');
+                }
+            });
+        } else {
+            // From user has not a valid token.
+            res.status(400).send('Error with the sender user token.');
+        }
+    });
+});
+
+
+
+// GET MY WALL (get)
+app.get('/users/:my_username/wall', function (req, res) {
+    var name = req.params.my_username;
+    console.log("Getting last message from my wall with username " + name + "....");
+    Users.findOne({ 'username': name }, 'message', function (err, user) {
+        if (err) {
+            error_message = 'Username ' + name + ' seems not valid...';
+            console.err(error_message);
+            res.status(400).send(error_message);
+        } else {
+            console.log('Message retrieved: ' + user.last_message);
+            res.status(200).send(user.last_message);
+        }
+    });
+});
 
 
 
 
 /******************** HELPER FUNCTIONS ********************/
+
+function user_has_valid_token(token, callback) {
+    Users.findOne({ 'google_id': token }, 'username', function (err, user) {
+        if (err) return handleError(err);
+        const user_has_valid_token = (user != undefined);
+        console.log('User' + user.username + 'has valid token.');
+        callback(user_has_valid_token, user.username);
+    });
+}
+
+
 
 // Launch a google id request, by taking the token and sending it to google
 // Send the response when it is negative
@@ -209,11 +298,13 @@ function get_id_from_google(token, callback) {
 
 function is_username_available(username, callback) {
     Users.findOne({ 'username': username }, function (err, user) {
-        if (err) return handleError(err);
-        const username_available = (user == undefined);
-        console.log("Username available: " + username_available);
-        callback(username_available);
-    })
+        if (err) {
+            console.log('User does not exist?');
+        }
+        const user_exist = (user != undefined);
+        console.log("Username exists: " + user_exist);
+        callback(!user_exist);
+    });
 }
 
 
